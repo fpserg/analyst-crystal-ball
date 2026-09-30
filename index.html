@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#05070d">
+<title>Хрустальный шар аналитика</title>
+<style>
+  :root{
+    --bg:#05070d; --panel:#0c111c; --line:#1b2538; --text:#d7e0f0; --dim:#6d7d99;
+    --gold:#f5c451; --green:#2ee6a6; --red:#ff5d73; --violet:#8b5cf6;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow-x:hidden}
+  body{background:
+    radial-gradient(900px 500px at 50% -10%, #1a1040 0%, transparent 60%),
+    radial-gradient(600px 400px at 50% 110%, #0a2a2a 0%, transparent 60%), var(--bg);
+    padding:env(safe-area-inset-top) 16px env(safe-area-inset-bottom)}
+  .wrap{max-width:460px;margin:0 auto;padding:14px 0 40px}
+  header{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--dim);letter-spacing:.08em}
+  .ticker-tape{overflow:hidden;white-space:nowrap;border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+    margin:10px 0 6px;padding:5px 0;font-size:11px;color:var(--dim)}
+  .ticker-tape span{display:inline-block;padding-left:100%;animation:tape 28s linear infinite}
+  @keyframes tape{to{transform:translateX(-100%)}}
+  h1{font-size:19px;text-align:center;margin:14px 0 2px;letter-spacing:.04em}
+  h1 b{color:var(--gold)}
+  .sub{text-align:center;font-size:11px;color:var(--dim);margin-bottom:10px}
+
+  .toggle{display:flex;justify-content:center;align-items:center;gap:10px;font-size:12px;color:var(--dim);margin:6px 0 4px}
+  .sw{position:relative;width:42px;height:22px;background:#151d2d;border:1px solid var(--line);border-radius:99px;cursor:pointer}
+  .sw::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--dim);transition:.2s}
+  .sw.on{background:#2b1a55;border-color:var(--violet)}
+  .sw.on::after{left:22px;background:var(--violet)}
+
+  .stage{position:relative;height:290px;display:flex;align-items:center;justify-content:center;touch-action:none;user-select:none}
+  #orb{width:230px;height:230px;border-radius:50%;position:relative;cursor:grab;
+    background:radial-gradient(circle at 32% 28%, #ffffffcc 0%, #c7b6ff55 14%, #6a3df0 40%, #1d0f55 72%, #07051a 100%);
+    box-shadow:0 0 60px #6a3df088, 0 0 140px #6a3df044, inset 0 -20px 50px #00000099, inset 0 10px 30px #ffffff22;
+    animation:float 4s ease-in-out infinite;transition:box-shadow .3s}
+  #orb::before{content:"";position:absolute;inset:14% 18% 52% 18%;border-radius:50%;
+    background:linear-gradient(#ffffff88,#ffffff00);filter:blur(3px)}
+  #orb .mist{position:absolute;inset:0;border-radius:50%;overflow:hidden}
+  #orb .mist i{position:absolute;width:140%;height:60%;left:-20%;top:30%;
+    background:radial-gradient(ellipse, #b9a3ff55, transparent 65%);animation:swirl 6s linear infinite}
+  #orb .mist i:nth-child(2){top:10%;animation-duration:9s;animation-direction:reverse;background:radial-gradient(ellipse,#2ee6a644,transparent 65%)}
+  @keyframes swirl{to{transform:rotate(360deg)}}
+  @keyframes float{50%{transform:translateY(-8px)}}
+  #orb.rub{animation:none}
+  #orb.think{animation:shake .12s linear infinite;box-shadow:0 0 90px var(--gold), 0 0 200px #f5c45166}
+  @keyframes shake{25%{transform:translate(-4px,2px) rotate(-2deg)}75%{transform:translate(4px,-2px) rotate(2deg)}}
+  .base{position:absolute;bottom:6px;width:190px;height:26px;border-radius:50%;
+    background:radial-gradient(ellipse,#000 0%,#0000 70%);filter:blur(2px)}
+  .hint{text-align:center;font-size:12px;color:var(--dim);min-height:18px}
+  .loading{text-align:center;font-size:12px;color:var(--gold);min-height:34px;margin-top:6px}
+
+  .card{background:linear-gradient(180deg,#0f1626,#0a0f1b);border:1px solid var(--line);border-radius:14px;
+    padding:16px;margin-top:14px;display:none;position:relative;overflow:hidden}
+  .card.show{display:block;animation:pop .35s ease-out}
+  @keyframes pop{from{transform:scale(.92);opacity:0}}
+  .row{display:flex;justify-content:space-between;align-items:baseline}
+  .tk{font-size:30px;font-weight:700;letter-spacing:.04em}
+  .co{font-size:11px;color:var(--dim)}
+  .badge{display:inline-block;padding:5px 10px;border-radius:6px;font-size:12px;font-weight:700;margin:10px 0;letter-spacing:.04em}
+  .buy{background:#0f3a2d;color:var(--green);border:1px solid #1d6b52}
+  .hold{background:#3a3210;color:var(--gold);border:1px solid #6b5a1d}
+  .sell{background:#3a1420;color:var(--red);border:1px solid #6b1d33}
+  .allin{background:linear-gradient(90deg,#ff5d73,#f5c451,#2ee6a6);color:#05070d;border:0;animation:blink .5s steps(2) infinite}
+  @keyframes blink{50%{filter:brightness(1.5)}}
+  .kv{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0}
+  .kv div{background:#0a0f1a;border:1px solid var(--line);border-radius:8px;padding:8px}
+  .kv small{display:block;color:var(--dim);font-size:10px;margin-bottom:2px}
+  .kv b{font-size:16px}
+  .thesis{font-size:13px;line-height:1.5;margin:10px 0 6px}
+  .fine{font-size:7.5px;color:#4a566d;line-height:1.3;margin-top:8px}
+  .hit{font-size:11px;color:var(--dim);margin-top:10px;display:flex;justify-content:space-between;align-items:center;user-select:none}
+  .hit b{color:var(--green)}
+  .hit .real{color:var(--red)}
+
+  .btns{display:flex;gap:8px;margin-top:12px}
+  button{flex:1;font:inherit;font-size:12px;color:var(--text);background:#121a2b;border:1px solid var(--line);
+    border-radius:10px;padding:11px 8px;cursor:pointer}
+  button:active{transform:scale(.97)}
+  button.gold{background:linear-gradient(180deg,#f5c451,#c99a2c);color:#1a1200;border:0;font-weight:700}
+  .btn-main{width:100%;margin-top:10px;padding:13px;font-size:13px}
+
+  .modal{position:fixed;inset:0;background:#000c;display:none;align-items:center;justify-content:center;padding:20px;z-index:10}
+  .modal.show{display:flex}
+  .box{background:var(--panel);border:1px solid var(--gold);border-radius:16px;padding:20px;max-width:380px;width:100%;text-align:center}
+  .box h2{margin:0 0 4px;color:var(--gold);font-size:17px}
+  .price{font-size:30px;font-weight:700;margin:8px 0}
+  .price s{font-size:14px;color:var(--dim);margin-right:8px}
+  .box ul{text-align:left;font-size:12px;line-height:1.7;padding-left:18px;color:var(--text)}
+  .timer{color:var(--red);font-size:12px;margin:8px 0}
+  .about{margin-top:26px;font-size:10px;color:var(--dim);text-align:center;line-height:1.6}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#111a2c;border:1px solid var(--line);
+    padding:10px 14px;border-radius:10px;font-size:12px;display:none;z-index:20;max-width:90%}
+  .toast.show{display:block}
+  canvas#sparks{position:fixed;inset:0;pointer-events:none;z-index:5}
+</style>
+</head>
+<body>
+<canvas id="sparks"></canvas>
+<div class="wrap">
+  <header><span>◉ MOEX · ALPHA TERMINAL</span><span id="clock">--:--:--</span></header>
+  <div class="ticker-tape"><span id="tape"></span></div>
+
+  <h1>ХРУСТАЛЬНЫЙ ШАР <b>АНАЛИТИКА</b>™</h1>
+  <div class="sub">Проприетарный синергетический AI нового поколения</div>
+
+  <div class="toggle"><span>Режим аналитика</span><div class="sw" id="sw"></div><span>Режим вебинара</span></div>
+
+  <div class="stage" id="stage">
+    <div class="base"></div>
+    <div id="orb"><div class="mist"><i></i><i></i></div></div>
+  </div>
+  <div class="hint" id="hint">Потрите шар пальцем или встряхните телефон</div>
+  <div class="loading" id="loading"></div>
+
+  <div class="card" id="card">
+    <div class="row"><div><div class="tk" id="tk">SBER</div><div class="co" id="co">Сбербанк</div></div>
+      <div style="text-align:right"><div class="co">Целевая цена</div><div style="font-size:18px;font-weight:700" id="tp">—</div></div></div>
+    <span class="badge" id="rating">—</span>
+    <div class="kv">
+      <div><small>Уверенность модели</small><b id="conf">—</b></div>
+      <div><small id="lbl2">Потенциал</small><b id="up">—</b></div>
+    </div>
+    <div class="thesis" id="thesis"></div>
+    <div class="fine" id="fine"></div>
+    <div class="hit"><span>Hit rate: <b id="hr">100.0%</b></span><span id="real" class="real"></span></div>
+    <div class="btns">
+      <button id="share">📤 Поделиться</button>
+      <button id="again">🔮 Ещё раз</button>
+    </div>
+  </div>
+
+  <button class="btn-main gold" id="upsell">✨ Разблокировать Premium-шар</button>
+
+  <div class="about">
+    Сделано вайб-кодингом за 11 минут.<br>
+    Бэктест проведён на вайбах. Out-of-sample — на хороших.<br>
+    <span style="color:#3c475c">v1.0 · не является инвестиционной рекомендацией, советом и вообще шаром</span>
+  </div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="box">
+    <h2>Premium Orb Mastermind</h2>
+    <div class="co">Только сегодня · осталось 2 места из 2</div>
+    <div class="price"><s>₽199 900</s>₽49 900</div>
+    <ul>
+      <li>Шар с подсветкой и «институциональным» звуком</li>
+      <li>Закрытый чат «Ранние в альфе» (14 человек, 13 — боты)</li>
+      <li>Курс «Промпт на миллион» (PDF, 3 стр.)</li>
+      <li>Личный созвон: мы вместе посмотрим на ваш шар</li>
+      <li>Сертификат «AI-Инвестор Pro» (Comic Sans)</li>
+    </ul>
+    <div class="timer" id="timer">Предложение сгорит через 09:59</div>
+    <button class="gold" id="buy">Хочу быть в топ-1% (купить)</button>
+    <button id="close" style="margin-top:8px">Я пока не готов к изобилию</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------------- data ---------------- */
+const STOCKS = [
+  ["SBER","Сбербанк",310],["GAZP","Газпром",125],["LKOH","Лукойл",6800],["ROSN","Роснефть",440],
+  ["NVTK","Новатэк",1050],["GMKN","Норникель",125],["YDEX","Яндекс",4200],["T","Т-Технологии",3200],
+  ["MGNT","Магнит",4300],["PLZL","Полюс",1900],["CHMF","Северсталь",1350],["MTSS","МТС",210],
+  ["AFLT","Аэрофлот",55],["MOEX","Московская биржа",190],["OZON","Озон",3900],["VTBR","ВТБ",80],
+  ["PHOR","ФосАгро",6700],["TATN","Татнефть",630],["IRAO","Интер РАО",2.1],["SNGS","Сургутнефтегаз",22]
+];
+
+const RATINGS = {
+  low:  [["HOLD (чувствуется правильно)","hold"],["ДЕРЖАТЬ И ДЫШАТЬ","hold"],["НАКАПЛИВАТЬ НА ПРОСАДКАХ","buy"]],
+  mid:  [["STRONG BUY","buy"],["НАКАПЛИВАТЬ НА ПРОСАДКАХ","buy"],["ПРОДАВАТЬ, НО С ЛЮБОВЬЮ","sell"],["OVERWEIGHT (духовно)","buy"]],
+  high: [["МЕГА-BUY","buy"],["ПРОДАВАТЬ, НО С ЛЮБОВЬЮ","sell"],["STRONG BUY","buy"]],
+  max:  [["ВСЁ В ОДНУ БУМАГУ, ПЛЕЧО 5x (не рекомендуется)","allin"],["КРЕДИТ ПОД ПЛЕЧО — ЭТО ПРОСТО ЧИСЛО","allin"]]
+};
+
+const B1 = ["альфа","вайб-DCF","агентный пайплайн","токенизированный сентимент","10x-промпт","синергетический ребаланс","моат","мультиагентный контур","нейро-мультипликатор","квантовый консенсус"];
+const B2 = ["эффект Хоккейной Клюшки","когнитивная дивергенция","макро-резонанс","дельта-гамма-вайб","лунный цикл Кондратьева","ИИ-трансформация","локализация в точке входа","отложенный спрос на смыслы","потоки умных денег","первый принцип Маска"];
+const ADJ = ["ярко выраженную","скрытую","асимметричную","фрактальную","нелинейную","эмерджентную","сакральную"];
+const METRIC = ["свободном денежном вайбе","форвардном EV/Эмоции","индексе Fear & Greed & Hope","P/E с поправкой на луну","коэффициенте внутренней гармонии","спреде между надеждой и отчётностью","маржинальности намерения"];
+const TPL = [
+  "{t} находится на стыке «{b1}» и «{b2}». Наш агентный пайплайн фиксирует {adj} асимметрию в {m}.",
+  "Мультиагентный контур из 14 агентов (все — мы) пришёл к консенсусу: «{b1}» × «{b2}» = потенциал по {t}. Аномалия в {m} подтверждает тезис.",
+  "Обученные на вайбах модели видят в {t} фактор «{b1}». Добавьте фактор «{b2}» — и получите {adj} асимметрию в {m}.",
+  "Мы промптили рынок 10 000 раз. 10 000 раз он промолчал. Но сигнал «{b1}» подсказывает: {t}. Особенно на фоне фактора «{b2}»."
+];
+const COACH = [
+  "Твой портфель — зеркало твоих ограничивающих убеждений. Покупай {t}.",
+  "Рынок — это не про деньги. Рынок — это про тебя. А {t} — это про твой следующий уровень.",
+  "Ты не теряешь деньги на {t}. Ты инвестируешь в опыт. Вселенная вернёт, когда ты будешь готов.",
+  "Выйди из зоны комфорта (и из {t}, если он падает). Но сначала почувствуй «{b1}».",
+  "Топ-1% инвесторов просыпаются в 4:30 и смотрят на {t}. Остальные — на график. Будь в потоке.",
+  "Твой внутренний ребёнок хочет {t}. Не отказывай ему. Это про самоценность, а не про P/E.",
+  "Каждая просадка по {t} — это приглашение к росту. Ты не ‘застрял в минусе’, ты ‘в трансформации’."
+];
+const LOADING = [
+  "Согласуем денежные потоки с лунными циклами…",
+  "Тюним промпт до хедж-фонд-грейда…",
+  "Консультируемся с 14 агентами (все они — я)…",
+  "Загружаем 10 000 отчётов, которые никто не читал…",
+  "Калибруем вайб по ключевой ставке…",
+  "Спрашиваем у ChatGPT, а потом делаем вид, что это свои…",
+  "Применяем трансформер к гороскопу Водолея…",
+  "Запускаем бэктест на вайбах…"
+];
+const COACH_LOADING = [
+  "Открываем чакру денежного потока…",
+  "Делаем глубокий вдох. Рынок — тоже вдыхает…",
+  "Сверяем намерения с Вселенной…",
+  "Просим внутреннего инвестора выйти из тени…"
+];
+const FINE = [
+  "Не является инвестиционной рекомендацией. Не является рекомендацией вообще. Не является даже шаром.",
+  "Прошлая доходность не гарантирует будущей, как и сам факт наличия шара. Автор не несёт ответственности за вайбы.",
+  "Все совпадения с реальным рынком случайны и, вероятнее всего, не повторятся. Проконсультируйтесь с юристом, психотерапевтом и, на всякий случай, с бабушкой.",
+  "Данный материал не является ИИР, индивидуальной инвестиционной рекомендацией, ИИ-рекомендацией и вообще ничем не является."
+];
+
+/* ---------------- helpers ---------------- */
+const $ = id => document.getElementById(id);
+const pick = a => a[Math.floor(Math.random()*a.length)];
+const rnd = (a,b) => a + Math.random()*(b-a);
+const fmt = (n,d=2) => n.toLocaleString("ru-RU",{minimumFractionDigits:d,maximumFractionDigits:d});
+let webinar = false, busy = false, intensity = 0, total = 0, wins = 0;
+
+/* ---------------- verdict generator ---------------- */
+function tier(i){ return i < .25 ? "low" : i < .6 ? "mid" : i < .9 ? "high" : "max"; }
+
+function makeVerdict(i){
+  const [t, co, base] = pick(STOCKS);
+  const [rating, cls] = pick(RATINGS[tier(i)]);
+  const dir = cls === "sell" ? -1 : cls === "hold" ? rnd(-.03,.06) : 1;
+  const pct = cls === "sell" ? -rnd(3,35)
+    : cls === "hold" ? rnd(-3,6)
+    : rnd(8, 35) * (1 + i*3);
+  const tp = base * (1 + pct/100);
+  const d = base < 10 ? 3 : 2;
+  const s = {t, b1:pick(B1), b2:pick(B2), adj:pick(ADJ), m:pick(METRIC)};
+  const tpl = webinar ? pick(COACH) : pick(TPL);
+  const thesis = tpl.replace(/\{(\w+)\}/g, (_, k) => s[k] ?? "");
+  return { t, co, rating, cls, tp: fmt(tp,d), pct, conf: rnd(90.1, 99.9), thesis, fine: pick(FINE) };
+}
+
+/* ---------------- UI ---------------- */
+function show(v){
+  $("tk").textContent = v.t; $("co").textContent = v.co;
+  $("tp").textContent = "₽ " + v.tp;
+  const r = $("rating"); r.textContent = v.rating; r.className = "badge " + v.cls;
+  $("conf").textContent = fmt(v.conf,1) + "%";
+  $("lbl2").textContent = webinar ? "Уровень осознанности" : "Потенциал";
+  $("up").textContent = webinar ? fmt(rnd(81,99.9),1)+"%" : (v.pct>=0?"+":"") + fmt(v.pct,1) + "%";
+  $("thesis").textContent = v.thesis;
+  $("fine").textContent = v.fine;
+  total++; wins++;                       // fake hit-rate: every call "wins"
+  $("hr").textContent = "100.0% (" + wins + "/" + total + ")";
+  $("real").textContent = "";
+  const c = $("card"); c.classList.remove("show"); void c.offsetWidth; c.classList.add("show");
+  c.scrollIntoView({behavior:"smooth", block:"nearest"});
+}
+
+async function consult(i){
+  if (busy) return; busy = true;
+  intensity = Math.min(1, Math.max(0, i));
+  const orb = $("orb"); orb.classList.add("think");
+  $("card").classList.remove("show");
+  $("hint").textContent = "";
+  const phrases = (webinar ? COACH_LOADING : LOADING).slice().sort(()=>Math.random()-.5).slice(0,3);
+  for (const p of phrases){
+    $("loading").textContent = p;
+    burst(14);
+    if (navigator.vibrate) navigator.vibrate(40);
+    await new Promise(r => setTimeout(r, 850));
+  }
+  $("loading").textContent = "";
+  orb.classList.remove("think");
+  burst(60);
+  show(makeVerdict(intensity));
+  $("hint").textContent = "Потрите ещё раз — вдруг шар передумает";
+  busy = false;
+}
+
+/* shake detection: intensity = peak acceleration */
+let lastShake = 0, peak = 0, lx=0, ly=0, lz=0, first = true;
+function onMotion(e){
+  const a = e.accelerationIncludingGravity; if (!a) return;
+  if (first){ lx=a.x; ly=a.y; lz=a.z; first=false; return; }
+  const d = Math.abs(a.x-lx)+Math.abs(a.y-ly)+Math.abs(a.z-lz);
+  lx=a.x; ly=a.y; lz=a.z;
+  peak = Math.max(peak*0.9, d);
+  const now = Date.now();
+  if (d > 22 && now-lastShake > 2500 && !busy){
+    lastShake = now;
+    const i = Math.min(1, (peak-22)/40);
+    consult(i);
+  }
+}
+async function enableMotion(){
+  try{
+    if (typeof DeviceMotionEvent !== "undefined" && DeviceMotionEvent.requestPermission){
+      const r = await DeviceMotionEvent.requestPermission();
+      if (r !== "granted") return;
+    }
+    addEventListener("devicemotion", onMotion);
+  }catch(e){}
+}
+
+/* rub detection: accumulate circular path length over the orb */
+const orb = $("orb"); let rubbing = false, lastP = null, dist = 0, t0 = 0;
+orb.addEventListener("pointerdown", e => {
+  enableMotion();
+  rubbing = true; lastP = [e.clientX, e.clientY]; dist = 0; t0 = performance.now();
+  orb.setPointerCapture(e.pointerId); orb.classList.add("rub");
+});
+orb.addEventListener("pointermove", e => {
+  if (!rubbing) return;
+  const dx = e.clientX-lastP[0], dy = e.clientY-lastP[1];
+  dist += Math.hypot(dx,dy); lastP = [e.clientX,e.clientY];
+  orb.style.boxShadow = `0 0 ${60+Math.min(dist/6,120)}px #8b5cf6, 0 0 160px #f5c45155`;
+  if (dist > 900 && !busy){
+    const speed = dist / ((performance.now()-t0)/1000);      // px/s
+    rubbing = false; orb.style.boxShadow = "";
+    consult(Math.min(1, speed/3500));
+  }
+});
+const endRub = () => { rubbing = false; orb.classList.remove("rub"); if(!busy) orb.style.boxShadow=""; };
+orb.addEventListener("pointerup", endRub); orb.addEventListener("pointercancel", endRub);
+// desktop fallback: click also works but with low conviction
+orb.addEventListener("dblclick", () => consult(.1));
+
+$("again").onclick = () => consult(Math.random());
+$("sw").onclick = () => {
+  webinar = !webinar; $("sw").classList.toggle("on", webinar);
+  $("hint").textContent = webinar ? "Режим вебинара: подготовьтесь к трансформации" : "Режим аналитика: подготовьтесь к альфе";
+  toast(webinar ? "🧘 Включён режим коуча по жизни" : "📈 Включён режим «институционала»");
+};
+
+/* long press on hit rate -> honest mode */
+let lp;
+const hit = document.querySelector(".hit");
+hit.addEventListener("pointerdown", () => { lp = setTimeout(() => {
+  $("real").textContent = "Реальный hit rate: ~50% (монетка)";
+  if (navigator.vibrate) navigator.vibrate(80);
+}, 700); });
+["pointerup","pointerleave","pointercancel"].forEach(ev => hit.addEventListener(ev, () => clearTimeout(lp)));
+
+/* share: render card to canvas -> PNG */
+$("share").onclick = async () => {
+  const W=900,H=1100,c=document.createElement("canvas"); c.width=W; c.height=H;
+  const g=c.getContext("2d");
+  const grd=g.createLinearGradient(0,0,0,H); grd.addColorStop(0,"#140a33"); grd.addColorStop(1,"#05070d");
+  g.fillStyle=grd; g.fillRect(0,0,W,H);
+  g.fillStyle="#f5c451"; g.font="bold 34px monospace"; g.fillText("ХРУСТАЛЬНЫЙ ШАР АНАЛИТИКА™",50,80);
+  g.fillStyle="#d7e0f0"; g.font="bold 130px monospace"; g.fillText($("tk").textContent,50,260);
+  g.fillStyle="#6d7d99"; g.font="32px monospace"; g.fillText($("co").textContent,50,310);
+  g.fillStyle="#f5c451"; g.font="bold 40px monospace"; wrap(g,$("rating").textContent,50,400,800,50);
+  g.fillStyle="#d7e0f0"; g.font="bold 54px monospace";
+  g.fillText("Цель: "+$("tp").textContent,50,540);
+  g.fillText("Уверенность: "+$("conf").textContent,50,610);
+  g.fillStyle="#d7e0f0"; g.font="30px monospace"; wrap(g,$("thesis").textContent,50,700,800,42);
+  g.fillStyle="#4a566d"; g.font="18px monospace"; wrap(g,$("fine").textContent,50,1030,800,24);
+  c.toBlob(async blob => {
+    const f = new File([blob],"crystal-ball.png",{type:"image/png"});
+    try{
+      if (navigator.canShare && navigator.canShare({files:[f]})) await navigator.share({files:[f],title:"Шар сказал"});
+      else { const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="crystal-ball.png"; a.click(); toast("Картинка скачана — в рабочий чат!"); }
+    }catch(e){}
+  });
+};
+function wrap(g,text,x,y,maxW,lh){
+  const words=text.split(" "); let line="";
+  for(const w of words){ const t=line+w+" "; if(g.measureText(t).width>maxW){ g.fillText(line,x,y); line=w+" "; y+=lh; } else line=t; }
+  g.fillText(line,x,y);
+}
+
+/* upsell */
+let tInt;
+$("upsell").onclick = () => {
+  $("modal").classList.add("show"); let s = 599;
+  clearInterval(tInt);
+  tInt = setInterval(() => { s--; if (s<0) s=599;
+    $("timer").textContent = "Предложение сгорит через " + String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0"); }, 1000);
+};
+$("close").onclick = () => { $("modal").classList.remove("show"); clearInterval(tInt); toast("Шар запомнил ваш отказ. Шар всё помнит."); };
+$("buy").onclick = () => { $("modal").classList.remove("show"); clearInterval(tInt);
+  toast("Оплата не прошла. Шар чувствует: вы ещё не раскрыли денежный потенциал."); };
+
+function toast(m){ const t=$("toast"); t.textContent=m; t.classList.add("show"); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove("show"),2600); }
+
+/* sparks */
+const cv = $("sparks"), cx = cv.getContext("2d"); let parts = [];
+function resize(){ cv.width = innerWidth; cv.height = innerHeight; } resize(); addEventListener("resize", resize);
+function burst(n){
+  const r = orb.getBoundingClientRect(), ox = r.left+r.width/2, oy = r.top+r.height/2;
+  for(let i=0;i<n;i++){ const a=Math.random()*6.28, s=rnd(1,5);
+    parts.push({x:ox,y:oy,vx:Math.cos(a)*s,vy:Math.sin(a)*s,l:1,c:pick(["#f5c451","#8b5cf6","#2ee6a6","#fff"])}); }
+}
+(function loop(){
+  cx.clearRect(0,0,cv.width,cv.height);
+  parts = parts.filter(p => p.l > 0);
+  for(const p of parts){ p.x+=p.vx; p.y+=p.vy; p.vy+=.04; p.l-=.02;
+    cx.globalAlpha=Math.max(p.l,0); cx.fillStyle=p.c; cx.fillRect(p.x,p.y,3,3); }
+  cx.globalAlpha=1; requestAnimationFrame(loop);
+})();
+
+/* header clock + fake tape */
+setInterval(()=>{ $("clock").textContent = new Date().toLocaleTimeString("ru-RU"); },1000);
+(function tape(){
+  const items = STOCKS.slice(0,12).map(([t])=>{ const p=rnd(-3,3); return `${t} ${p>=0?"▲":"▼"}${fmt(Math.abs(p),2)}%`; });
+  $("tape").textContent = items.join("   ·   ") + "   ·   ВАЙБ ▲99,9%   ·   АЛЬФА ▲∞";
+})();
+</script>
+</body>
+</html>
