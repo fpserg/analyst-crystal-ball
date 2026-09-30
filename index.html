@@ -115,6 +115,7 @@
     <div id="orb"><div class="mist"><i></i><i></i></div></div>
   </div>
   <div class="hint" id="hint">Потрите шар пальцем или встряхните телефон</div>
+  <button class="btn-main" id="shakeBtn" style="display:none">📳 Включить тряску</button>
   <div class="loading" id="loading"></div>
 
   <div class="card" id="card">
@@ -284,35 +285,56 @@ async function consult(i){
   busy = false;
 }
 
-/* shake detection: intensity = peak acceleration */
-let lastShake = 0, peak = 0, lx=0, ly=0, lz=0, first = true;
+/* shake detection: how far total acceleration departs from 1 g (m/s²) = conviction */
+const G = 9.81, SHAKE_MIN = 9, SHAKE_MAX = 35;
+const touchy = matchMedia("(pointer:coarse)").matches;
+let motionOn = false, motionSeen = false, lastShake = 0, winStart = 0, winPeak = 0;
 function onMotion(e){
-  const a = e.accelerationIncludingGravity; if (!a) return;
-  if (first){ lx=a.x; ly=a.y; lz=a.z; first=false; return; }
-  const d = Math.abs(a.x-lx)+Math.abs(a.y-ly)+Math.abs(a.z-lz);
-  lx=a.x; ly=a.y; lz=a.z;
-  peak = Math.max(peak*0.9, d);
+  let dev = null;
+  const g = e.accelerationIncludingGravity;
+  if (g && g.x != null) dev = Math.abs(Math.hypot(g.x, g.y, g.z) - G);
+  else if (e.acceleration && e.acceleration.x != null) dev = Math.hypot(e.acceleration.x, e.acceleration.y, e.acceleration.z);
+  if (dev == null) return;
+  motionSeen = true;
   const now = Date.now();
-  if (d > 22 && now-lastShake > 2500 && !busy){
-    lastShake = now;
-    const i = Math.min(1, (peak-22)/40);
-    consult(i);
+  if (winStart){                               // collect the peak of the shake for 400 ms
+    winPeak = Math.max(winPeak, dev);
+    if (now - winStart > 400){
+      const i = Math.min(1, Math.max(0, (winPeak - SHAKE_MIN) / (SHAKE_MAX - SHAKE_MIN)));
+      winStart = 0; lastShake = now; consult(i);
+    }
+  } else if (dev > SHAKE_MIN && now - lastShake > 2500 && !busy){
+    winStart = now; winPeak = dev;
   }
 }
 async function enableMotion(){
+  if (motionOn) return true;
   try{
-    if (typeof DeviceMotionEvent !== "undefined" && DeviceMotionEvent.requestPermission){
+    if (typeof DeviceMotionEvent === "undefined"){ toast("Этот браузер не отдаёт датчики движения"); return false; }
+    if (typeof DeviceMotionEvent.requestPermission === "function"){      // iOS 13+: needs a real tap
       const r = await DeviceMotionEvent.requestPermission();
-      if (r !== "granted") return;
+      if (r !== "granted"){ toast("Доступ к датчикам отклонён. Перезагрузите страницу и нажмите «Разрешить»."); return false; }
     }
     addEventListener("devicemotion", onMotion);
-  }catch(e){}
+    motionOn = true;
+    $("shakeBtn").style.display = "none";
+    if (touchy){
+      $("hint").textContent = "Тряска включена — трясите телефон!";
+      setTimeout(() => { if (!motionSeen) toast("Датчики движения молчат. Нужен HTTPS и разрешение на «движение» в настройках браузера."); }, 2000);
+    }
+    return true;
+  }catch(e){ toast("Тряска недоступна: " + ((e && e.message) || e)); return false; }
 }
+$("shakeBtn").addEventListener("click", enableMotion);
+(function initMotion(){
+  if (typeof DeviceMotionEvent === "undefined") return;
+  if (typeof DeviceMotionEvent.requestPermission === "function") $("shakeBtn").style.display = "block";  // iOS: ask on tap
+  else enableMotion();                                                                                     // Android etc.: no prompt needed
+})();
 
 /* rub detection: accumulate circular path length over the orb */
 const orb = $("orb"); let rubbing = false, lastP = null, dist = 0, t0 = 0;
 orb.addEventListener("pointerdown", e => {
-  enableMotion();
   rubbing = true; lastP = [e.clientX, e.clientY]; dist = 0; t0 = performance.now();
   orb.setPointerCapture(e.pointerId); orb.classList.add("rub");
 });
